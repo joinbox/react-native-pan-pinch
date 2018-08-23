@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated from "react-native-reanimated";
-import { PanGestureHandler, PinchGestureHandler, State } from "react-native-gesture-handler";
+import Animated from 'react-native-reanimated';
+import { PanGestureHandler, PinchGestureHandler, State } from 'react-native-gesture-handler';
 
 const {
     event,
@@ -16,19 +16,19 @@ const {
     sub,
     greaterThan,
     pow,
-    divide
+    divide,
 } = Animated;
 
 
 /**
- * Resulting translation is calculated in the same way for x and y dimensions; this function 
+ * Resulting translation is calculated in the same way for x and y dimensions; this function
  * returns the necessary logic
  * @param  {Value} previousTranslation
  * @param  {Value} currentTranslation
  * @param  {State} gestureState
- * @param  {Animated.Node} operation        Reanimated operation that is used to convert previous 
+ * @param  {Animated.Node} operation        Reanimated operation that is used to convert previous
  *                                          to next value (e.g. multiply, add)
- * @param {Number[]} boundaries             Values that should not be exceeded by next value, in 
+ * @param {Number[]} boundaries             Values that should not be exceeded by next value, in
  *                                          the form of [min, max]
  * @return {Animated.Node}
  */
@@ -43,13 +43,14 @@ function updateTranslation(
     return cond(
         eq(gestureState, State.END),
 
-        // State.END: 
+        // State.END:
         // - update previous: add current, but don't exceed boundaries
         // - re-set current to base (initial value; needed because next state will be BEGAN and
         //   current will be added to/multiplied with previous again)
         // - return (updated) previous
-        [ 
-            set(previousTranslation, 
+        [
+            set(
+                previousTranslation,
                 cap(
                     boundaries[0],
                     boundaries[1],
@@ -70,9 +71,9 @@ function updateTranslation(
             boundaries[1],
             operation(previousTranslation, currentTranslation),
             operation,
-        )
+        ),
     );
-}   
+}
 
 /**
  * Caps a value if it exceeds minValue or maxValue
@@ -105,31 +106,33 @@ function bounce(minValue, maxValue, value, operation) {
     const exceedsLow = sub(minValue, value);
     return cond(
         greaterThan(exceedsHigh, 0),
-        
+
         // We're exceeding the upper boundary
-        // Use root (x ^ (1/1.3) because square root is too intense in slowing down) for extended 
+        // Use root (x ^ (1/1.3) because square root is too intense in slowing down) for extended
         // property: makes sure we don't overextend.
         operation(maxValue, pow(exceedsHigh, divide(1, 1.3))),
 
-        cond(greaterThan(exceedsLow, 0),
+        cond(
+            greaterThan(exceedsLow, 0),
             // We're exceeding the lower boundary: Remove reduced difference from min
             operation(
-                minValue, multiply(
+                minValue,
+                multiply(
                     pow(exceedsLow, divide(1, 1.3)),
                     -1,
-                )
+                ),
             ),
             value,
-        )
+        ),
     );
 }
 
 
 
 /**
- * Pan and pinch handler. 
- * - Renders children passed to it. 
- * - Pass in variables (Animated.Value for react-native-reanimated) for left, top and zoom; they 
+ * Pan and pinch handler.
+ * - Renders children passed to it.
+ * - Pass in variables (Animated.Value for react-native-reanimated) for left, top and zoom; they
  *   will be updated and can be used in child components.
  * - Re-render/initialize component when layout changes! (As we only measure layout on init of the
  *   component)
@@ -140,7 +143,7 @@ export default class PanPinch extends React.Component {
     // cappedZoom as it's not a Value (and cappedZoom is defined with the original state when the
     // instance is initialized) – we need to wait for Value.set().
     state = {
-        // Setting ranges to Infinity crashes the app, reanimated seems to be unable to handle 
+        // Setting ranges to Infinity crashes the app, reanimated seems to be unable to handle
         // it (well, who is)
         zoomRange: [0.5, 2],
         xRange: [0, 100],
@@ -161,7 +164,7 @@ export default class PanPinch extends React.Component {
     }
 
     /**
-     * When user zooms more than is allowed by caps, we store the excess value in this 
+     * When user zooms more than is allowed by caps, we store the excess value in this
      * variable and remove it from the user's current zoom factor as soon as he zooms in the
      * opposite direction
      */
@@ -206,34 +209,34 @@ export default class PanPinch extends React.Component {
     onPanStateChange = event([{
         nativeEvent: {
             state: this.gestureStates.pan,
-        }
+        },
     }]);
 
     onPanGestureEvent = event([{
         nativeEvent: {
             translationX: this.currentTransforms.x,
             translationY: this.currentTransforms.y,
-        }
+        },
     }]);
 
     onPinchStateChange = event([{
         nativeEvent: {
             state: this.gestureStates.pinch,
-        }
+        },
     }]);
 
     onPinchGestureEvent = event([{
         nativeEvent: {
             scale: this.currentTransforms.zoom,
-        }
+        },
     }]);
 
-    /*static getDerivedStateFromProps(props) {
+    /* static getDerivedStateFromProps(props) {
         console.log('new props', props);
         return {
             zoomRange: props.zoomRange
         };
-    }*/
+    } */
 
     render() {
         console.log('RENDERING', this.cappedTranslation, this.state);
@@ -261,14 +264,14 @@ export default class PanPinch extends React.Component {
                                      or child component; this is the only way I found worked.
                                      Passing a prop from the parent component and updating it with
                                      set() does not update the parent view. */ }
-                                { React.Children.map(this.props.children, (child) => {
-                                    return React.cloneElement(child, {
+                                { React.Children.map(this.props.children, child => (
+                                    React.cloneElement(child, {
                                         // 'left' or 'translateX' are reserved words
                                         animatedLeft: this.resultingXTranslation,
                                         animatedTop: this.resultingYTranslation,
                                         animatedZoom: this.resultingZoom,
-                                    });
-                                }) }
+                                    })
+                                )) }
 
                             </Animated.View>
                         </PinchGestureHandler>
@@ -284,8 +287,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         width: '100%',
-        alignItems: "flex-start",
-        justifyContent: "flex-start",
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
     },
 });
 
