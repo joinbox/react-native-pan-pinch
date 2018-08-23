@@ -1,6 +1,6 @@
 {
   "name": "react-native-pan-pinch",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "\"Pan and pinch (zoom) component for React Native, based on reanimated\"",
   "main": "src/PanPinch.js",
   "scripts": {
@@ -22,7 +22,6 @@
     "expo": "^29.0.0",
     "react": "16.3.1",
     "react-native": "https://github.com/expo/react-native/archive/sdk-29.0.0.tar.gz",
-    "//": "If react-native-reanimated is not a peer dep, it won't be found – even though it's part of expo >= 28",
     "react-native-reanimated": "1.0.0-alpha.3"
   },
   "author": "Felix Steiner <felix@joinbox.com> (http://joinbox.com)",
