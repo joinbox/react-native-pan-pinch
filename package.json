@@ -18,6 +18,11 @@
     "React",
     "Native"
   ],
+  "devDependencies": {
+    "@joinbox/eslint-config-joinbox": "^1.0.5",
+    "babel-eslint": "^8.2.6",
+    "eslint-plugin-react": "^7.11.1"
+  },
   "peerDependencies": {
     "expo": "^29.0.0",
     "react": "16.3.1",

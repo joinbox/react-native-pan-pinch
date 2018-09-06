@@ -89,7 +89,7 @@ function cap(minValue, maxValue, value) {
 
 /**
  * Scales/moves object given to the user's interaction; if it extends range, has a spring-like
- * extension (slows down)
+ * extension (slows down and sticks slightly to allowed boundaries)
  * @param {Number|Value} minValue       Minimum boundary that shouldn't be exceeded
  * @param {Number|Value} maxValue       Maximum boundary that shouldn't be exceeded
  * @param {Number|Value} value          Current value
@@ -100,26 +100,53 @@ function cap(minValue, maxValue, value) {
 function bounce(minValue, maxValue, value, operation) {
 
     // No bouncing support for multiplications yet
-    if (operation === multiply) return value;
+    // if (operation === multiply) return value;
 
+    // Span between minValue and maxValue
+    const boundaryDiff = sub(maxValue, minValue);
+    // Always use relative bounce effect (for panning and pinching) – don't slow down by pixels 
+    // but by percentage user extends over boundaries, where percentage is measured by how much
+    // (current value - minValue) exceeds the *boundaryDiff*.
+    const exceedsHighRelatively = divide(
+        sub(value, minValue),
+        boundaryDiff,
+    );
+    // If we're below minValue, exceedsLowRelatively is above 1!
+    const exceedsLowRelatively = divide(
+        sub(maxValue, value),
+        boundaryDiff,
+    );
     const exceedsHigh = sub(value, maxValue);
     const exceedsLow = sub(minValue, value);
+
     return cond(
         greaterThan(exceedsHigh, 0),
 
-        // We're exceeding the upper boundary
-        // Use root (x ^ (1/1.3) because square root is too intense in slowing down) for extended
-        // property: makes sure we don't overextend.
-        operation(maxValue, pow(exceedsHigh, divide(1, 1.3))),
+        // We're exceeding the upper boundary:
+        // Just multiply boundaryDiff with a spring-like variable then add minValue to it. 
+        // Why can we not just multiply maxValue with spring-like variable? Because maxValue might
+        // be 0.
+        add(
+            multiply(
+                boundaryDiff,
+                // 4th root of exceedsHighRelatively
+                pow(exceedsHighRelatively, 0.25),
+            ),
+            minValue,
+        ),
 
         cond(
             greaterThan(exceedsLow, 0),
-            // We're exceeding the lower boundary: Remove reduced difference from min
-            operation(
-                minValue,
+
+            // We're exceeding the lower boundary: 
+            // Multiply boundaryDiff with a spring-like variable then remove it from maxValue.
+            // Why can we not just multiply minValue with spring-like variable? Because minValue
+            // might be 0.
+            sub(
+                maxValue,
                 multiply(
-                    pow(exceedsLow, divide(1, 1.3)),
-                    -1,
+                    boundaryDiff,
+                    pow(exceedsLowRelatively, 0.25),
                 ),
             ),
             value,
@@ -145,7 +172,7 @@ export default class PanPinch extends React.Component {
     state = {
         // Setting ranges to Infinity crashes the app, reanimated seems to be unable to handle
         // it (well, who is)
-        zoomRange: [0.5, 2],
+        zoomRange: [0.3, 1.5],
         xRange: [0, 100],
         yRange: [0, 200],
     }
@@ -289,6 +316,8 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'flex-start',
         justifyContent: 'flex-start',
+        borderWidth: 10,
+        borderColor: 'red',
     },
 });
 

@@ -1,0 +1,10 @@
+{
+    "extends": [
+        "@joinbox/joinbox",
+        "plugin:react/recommended"
+    ],
+    "rules": {
+        "no-mixed-operators": 0
+    },
+    "parser": "babel-eslint",
+}
