@@ -64,10 +64,25 @@ This is a pan and pinch component for React Native that
 
     export default class App extends React.Component {
 
+        state = {
+            dimensions: [],
+        }
+
+        handleLayout(ev) {
+            const {width, height} = ev.nativeEvent.layout;
+            this.setState({ dimensions: [width, height] });
+        }
+
         render() {
             return (
-                <View style={styles.container}>
-                    <PanPinch>
+                { /* In this case, we want this view to serve as the boundaries for Box. Therefore
+                     we have to view its layout change and update containerDimensions on PanPinch
+                     accordingly */ }
+                <View
+                    style={styles.container}
+                    onLayout={(ev) => this.handleLayout(ev)}
+                >
+                    <PanPinch containerDimensions={this.state.dimensions}>
                         <Box />
                     </PanPinch>
                 </View>
@@ -78,10 +93,19 @@ This is a pan and pinch component for React Native that
 
     const styles = StyleSheet.create({
         container: {
-            flex: 1,
+            width: '80%',
+            height: '80%'
         },
     });
     ```
+
+# API
+
+## Props
+
+- **containerDimensions**: Takes an array of 2 numbers (width and height of the boundaries in which
+the PanPinch's content can move), e.g. `[200, 400]` if we want to restrict x pan to 200 and y pan
+to 400 px.
 
 # Limitations
 
