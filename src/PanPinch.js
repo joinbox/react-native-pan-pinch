@@ -14,9 +14,8 @@ const {
     min,
     max,
     sub,
-    debug,
-    greaterThan,
-    pow,
+    // greaterThan,
+    // pow,
     divide,
 } = Animated;
 
@@ -41,7 +40,7 @@ function cap(minValue, maxValue, value) {
  * @param {Number|Value} value          Current value
  * @return {Animated.Node}
  */
-function bounce(minValue, maxValue, value) {
+/* function bounce(minValue, maxValue, value) {
 
     // Span between minValue and maxValue
     const boundaryDiff = sub(maxValue, minValue);
@@ -87,13 +86,14 @@ function bounce(minValue, maxValue, value) {
                 maxValue,
                 multiply(
                     boundaryDiff,
+                    // 4th root of exceedsLowRelatively
                     pow(exceedsLowRelatively, 0.25),
                 ),
             ),
             value,
         ),
     );
-}
+} */
 
 
 
@@ -143,7 +143,9 @@ function updateTranslation(
 
         // State.ACTIVE or State.BEGAN etc: calculate and return current value, use spring-like
         // effect if boundaries are exceeded
-        bounce(
+        // TODO: Replace with bounce as soon as it works. Now trembles a lot when content is
+        // smaller than the container and we move it …
+        cap(
             boundaries[0],
             boundaries[1],
             operation(previousTranslation, currentTranslation),
@@ -178,10 +180,12 @@ function getAdjustedBounds(originalValue, zoom, contentWidth, operation) {
 /**
  * Pan and pinch handler.
  * - Renders children passed to it.
- * - Pass in variables (Animated.Value for react-native-reanimated) for left, top and zoom; they
- *   will be updated and can be used in child components.
+ * - Adds props animatedZoom, animatedLeft and animatedTop (all of type Animated.Node) to *all*
+ *   its children. Children may use those to position themselves depending on the user's
+ *   interactions.
  * - Re-render/initialize component when layout changes! (As we only measure layout on init of the
  *   component)
+ * - TODO: Use as HOC instead of child-rendering component
  */
 export default class PanPinch extends React.Component {
 
@@ -213,6 +217,12 @@ export default class PanPinch extends React.Component {
      * and use setValue() to update boundaries from parent element!
      */
     setupProperties() {
+
+        console.log(
+            'PanPinch: Setup properties, state has changed and is',
+            this.state.containerDimensions,
+            this.state.contentDimensions,
+        );
 
         /**
          * When a gesture ends, we store the resulting transforms in previousValues; whenever the
@@ -266,57 +276,50 @@ export default class PanPinch extends React.Component {
         );
 
 
+        // TODO: When/if we re-add bounce effect (spring-like when extending over boundaries),
+        // only update adjustedMin/Max when gesture ends:
+        // let adjustedXMin = new Value(this.state.xRange[0]);
+        // adjustedXMin = cond(
+        //    eq(this.gestureStates.pinch, State.BEGAN),
+        //    currentCodeHere
+        //    adjustedXMin, // Just return previous value
+        // );
 
         // We have to extend/contract boundaries when we zoom in (see getAdjustedBounds).
         // Only update boundaries when  pinch gesture ends. If we update in real time, we get
         // some nasty rendering issues.
-        let adjustedXMin = new Value(this.state.xRange[0]);
-        adjustedXMin = cond(
-            eq(this.gestureStates.pinch, State.END),
-            getAdjustedBounds(
-                this.state.xRange[0],
-                cappedEffectiveZoom,
-                this.state.contentDimensions[0],
-                sub,
-            ),
-            adjustedXMin, // Just return previous value
+        const adjustedXMin = getAdjustedBounds(
+            this.state.xRange[0],
+            cappedEffectiveZoom,
+            this.state.contentDimensions[0],
+            sub,
         );
 
-        let adjustedXMax = new Value(this.state.xRange[1]);
-        adjustedXMax = cond(
-            eq(this.gestureStates.pinch, State.END),
-            getAdjustedBounds(
-                this.state.xRange[1],
-                cappedEffectiveZoom,
-                this.state.contentDimensions[0],
-                add,
-            ),
-            adjustedXMax, // Just return previous value
+        const adjustedXMax = getAdjustedBounds(
+            this.state.xRange[1],
+            cappedEffectiveZoom,
+            this.state.contentDimensions[0],
+            add,
         );
 
-        let adjustedYMin = new Value(this.state.yRange[0]);
-        adjustedYMin = cond(
-            eq(this.gestureStates.pinch, State.END),
-            getAdjustedBounds(
-                this.state.yRange[0],
-                cappedEffectiveZoom,
-                this.state.contentDimensions[1],
-                sub,
-            ),
-            adjustedYMin,
+        const adjustedYMin = getAdjustedBounds(
+            this.state.yRange[0],
+            cappedEffectiveZoom,
+            this.state.contentDimensions[1],
+            sub,
         );
 
-        let adjustedYMax = new Value(this.state.yRange[1]);
-        adjustedYMax = cond(
-            eq(this.gestureStates.pinch, State.END),
-            getAdjustedBounds(
-                this.state.yRange[1],
-                cappedEffectiveZoom,
-                this.state.contentDimensions[1],
-                add,
-            ),
-            adjustedYMax,
+        const adjustedYMax = getAdjustedBounds(
+            this.state.yRange[1],
+            cappedEffectiveZoom,
+            this.state.contentDimensions[1],
+            add,
         );
+
+        /* const adjustedXMin = this.state.xRange[0];
+        const adjustedXMax = this.state.xRange[1];
+        const adjustedYMin = this.state.yRange[0];
+        const adjustedYMax = this.state.yRange[1]; */
 
 
 
@@ -418,7 +421,7 @@ export default class PanPinch extends React.Component {
 
 
     render() {
-        console.log('RENDERING', this.cappedTranslation, this.state);
+        console.log('PanPinch: Rendering', this.cappedTranslation, this.state);
         this.setupProperties();
         return (
             <View style={styles.container}>
