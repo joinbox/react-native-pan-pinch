@@ -1,7 +1,11 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated from 'react-native-reanimated';
-import { PanGestureHandler, PinchGestureHandler, State } from 'react-native-gesture-handler';
+import { DangerZone, GestureHandler } from 'expo';
+
+const { PanGestureHandler, PinchGestureHandler, State } = GestureHandler;
+
+const { Animated } = DangerZone;
+// console.log = () => {};
 
 const {
     event,
@@ -13,6 +17,9 @@ const {
     add,
     min,
     max,
+    debug,
+    block,
+    greaterOrEq,
     sub,
     // greaterThan,
     // pow,
@@ -195,69 +202,130 @@ export default class PanPinch extends React.Component {
     state = {
         // Setting ranges to Infinity crashes the app, reanimated seems to be unable to handle
         // it (well, who is)
-        containerDimensions: [0, 0],
-        contentDimensions: [0, 0],
+        containerDimensions: [100, 100],
+        contentDimensions: [20, 20],
         zoomRange: [0.25, 2],
-        xRange: [0, 100],
-        yRange: [0, 200],
     }
 
     panHandler = React.createRef();
     pinchHandler = React.createRef();
 
 
-    constructor(...props) {
-        super(...props);
-        this.setupProperties();
+
+    /**
+     * We may set containerDimensions and contentDimensions through props. From these, we need to
+     * get xRange and yRange that limit a user's panning to certain boundaries.
+     */
+    static getDerivedStateFromProps(props) {
+
+        const newState = {};
+        // Seems to break everything on iOS if console is inactive
+
+        if (props.containerDimensions) {
+            if (
+                Array.isArray(props.containerDimensions) &&
+                props.containerDimensions.length === 2
+            ) {
+                newState.containerDimensions = props.containerDimensions;
+            } else {
+                console.log('PanPinch: Invalid containerDimensions', props.containerDimensions);
+            }
+        }
+
+        if (props.contentDimensions) {
+            if (
+                Array.isArray(props.contentDimensions) &&
+                props.contentDimensions.length === 2
+            ) {
+                newState.contentDimensions = props.contentDimensions;
+            } else {
+                console.log('PanPinch: Invalid contentDimensions', props.contentDimensions);
+            }
+        }
+
+        if (props.zoomRange) {
+            if (
+                Array.isArray(props.zoomRange) &&
+                props.contentDimensions.length === 2
+            ) {
+                newState.zoomRange = props.zoomRange;
+            } else {
+                console.log('PanPinch: Invalid zoomRange', props.zoomRange);
+            }
+        }
+
+        console.log('PanPinch: Return derived state');
+        return newState;
+
     }
 
 
-    /**
-     * This is BS, but necessary. TODO: When setValue is available, make all props regular props
-     * and use setValue() to update boundaries from parent element!
-     */
-    setupProperties() {
+    render() {
 
-        console.log(
-            'PanPinch: Setup properties, state has changed and is',
-            this.state.containerDimensions,
-            this.state.contentDimensions,
+        const [containerWidth, containerHeight] = this.state.containerDimensions;
+        const [contentWidth, contentHeight] = this.state.contentDimensions;
+
+        /* if (containerWidth >= contentWidth) {
+            xRange = [0, containerWidth - contentWidth];
+        } else {
+            xRange = [contentWidth * -1 + containerWidth, 0];
+        }
+        if (containerHeight >= contentHeight) {
+            yRange = [0, containerHeight - contentHeight];
+        } else {
+            yRange = [contentHeight * -1 + containerHeight, 0];
+        } */
+
+        // We must use reanimated functions here as state.contentDimensions and
+        // state.containerDimensions might be Animated.Values
+        const xRangeMin = cond(
+            greaterOrEq(containerWidth, contentWidth),
+            0,
+            sub(containerWidth, contentWidth),
         );
 
-        /**
-         * When a gesture ends, we store the resulting transforms in previousValues; whenever the
-         * next gesture happens, it's added to or multiplied with previousTransforms
-         */
-        this.previousTransforms = {
+        const xRangeMax = cond(
+            greaterOrEq(containerWidth, contentWidth),
+            sub(containerWidth, contentWidth),
+            0,
+        );
+
+        const yRangeMin = cond(
+            greaterOrEq(containerHeight, contentHeight),
+            0,
+            sub(containerHeight, contentHeight),
+        );
+
+        const yRangeMax = cond(
+            greaterOrEq(containerHeight, contentHeight),
+            sub(containerHeight, contentHeight),
+            0,
+        );
+
+
+        // TODO: Move to properties to better distribute content/keep methods short.
+        // Crashes iOS app now *if* debugging is disabled.
+        const previousTransforms = {
             x: new Value(0),
             y: new Value(0),
             zoom: new Value(1),
         };
 
-        /**
-         * When user zooms more than is allowed by caps, we store the excess value in this
-         * variable and remove it from the user's current zoom factor as soon as he zooms in the
-         * opposite direction
-         */
-        this.capOffsets = {
-            zoom: new Value(1),
-        };
-
-        this.currentTransforms = {
+        const currentTransforms = {
             x: new Value(0),
             y: new Value(0),
             zoom: new Value(1),
         };
 
-        this.gestureStates = {
+        const gestureStates = {
             pan: new Value(-1),
             pinch: new Value(-1),
         };
 
-        this.resultingZoom = updateTranslation(
-            this.previousTransforms.zoom,
-            this.currentTransforms.zoom,
-            this.gestureStates.pinch,
+        const resultingZoom = updateTranslation(
+            previousTransforms.zoom,
+            currentTransforms.zoom,
+            gestureStates.pinch,
             this.state.zoomRange,
             multiply,
             1,
@@ -266,14 +334,17 @@ export default class PanPinch extends React.Component {
 
         // Don't use resultingZoom to set adjusted range limits; they are larger than the actual
         // boundaries when pinchGesture ends (just before they snap back)
-        const cappedEffectiveZoom = cap(
-            this.state.zoomRange[0],
-            this.state.zoomRange[1],
-            multiply(
-                this.previousTransforms.zoom,
-                this.currentTransforms.zoom,
+        const cappedEffectiveZoom = block([
+            debug('PanPinch: Current zoom is', currentTransforms.zoom),
+            cap(
+                this.state.zoomRange[0],
+                this.state.zoomRange[1],
+                multiply(
+                    previousTransforms.zoom,
+                    currentTransforms.zoom,
+                ),
             ),
-        );
+        ]);
 
 
         // TODO: When/if we re-add bounce effect (spring-like when extending over boundaries),
@@ -289,155 +360,94 @@ export default class PanPinch extends React.Component {
         // Only update boundaries when  pinch gesture ends. If we update in real time, we get
         // some nasty rendering issues.
         const adjustedXMin = getAdjustedBounds(
-            this.state.xRange[0],
+            xRangeMin,
             cappedEffectiveZoom,
-            this.state.contentDimensions[0],
+            contentWidth,
             sub,
         );
 
         const adjustedXMax = getAdjustedBounds(
-            this.state.xRange[1],
+            xRangeMax,
             cappedEffectiveZoom,
-            this.state.contentDimensions[0],
+            contentWidth,
             add,
         );
 
         const adjustedYMin = getAdjustedBounds(
-            this.state.yRange[0],
+            yRangeMin,
             cappedEffectiveZoom,
-            this.state.contentDimensions[1],
+            contentHeight,
             sub,
         );
 
         const adjustedYMax = getAdjustedBounds(
-            this.state.yRange[1],
+            yRangeMax,
             cappedEffectiveZoom,
-            this.state.contentDimensions[1],
+            contentHeight,
             add,
         );
 
-        /* const adjustedXMin = this.state.xRange[0];
-        const adjustedXMax = this.state.xRange[1];
-        const adjustedYMin = this.state.yRange[0];
-        const adjustedYMax = this.state.yRange[1]; */
 
+        const resultingXTranslation = block([
+            debug('PanPinch: xMin', xRangeMin),
+            debug('PanPinch: adjusted xMin', adjustedXMin),
+            updateTranslation(
+                previousTransforms.x,
+                currentTransforms.x,
+                gestureStates.pan,
+                [adjustedXMin, adjustedXMax],
+            ),
+        ]);
 
-
-
-        this.resultingXTranslation = updateTranslation(
-            this.previousTransforms.x,
-            this.currentTransforms.x,
-            this.gestureStates.pan,
-            [adjustedXMin, adjustedXMax],
-        );
-
-        this.resultingYTranslation = updateTranslation(
-            this.previousTransforms.y,
-            this.currentTransforms.y,
-            this.gestureStates.pan,
+        const resultingYTranslation = updateTranslation(
+            previousTransforms.y,
+            currentTransforms.y,
+            gestureStates.pan,
             [adjustedYMin, adjustedYMax],
         );
 
-        this.onPanStateChange = event([{
+        const onPanStateChange = event([{
             nativeEvent: {
-                state: this.gestureStates.pan,
+                state: gestureStates.pan,
             },
         }]);
 
-        this.onPanGestureEvent = event([{
+        const onPanGestureEvent = event([{
             nativeEvent: {
-                translationX: this.currentTransforms.x,
-                translationY: this.currentTransforms.y,
+                translationX: currentTransforms.x,
+                translationY: currentTransforms.y,
             },
         }]);
 
-        this.onPinchStateChange = event([{
+        const onPinchStateChange = event([{
             nativeEvent: {
-                state: this.gestureStates.pinch,
+                state: gestureStates.pinch,
             },
         }]);
 
-        this.onPinchGestureEvent = event([{
+        const onPinchGestureEvent = event([{
             nativeEvent: {
-                scale: this.currentTransforms.zoom,
+                scale: currentTransforms.zoom,
             },
         }]);
 
-    }
+        console.log('PanPinch: Rendering');
 
-
-    /**
-     * We may set containerDimensions and contentDimensions through props. From these, we need to
-     * get xRange and yRange that limit a user's panning to certain boundaries.
-     */
-    static getDerivedStateFromProps(props, state) {
-        const newState = {};
-        console.log('PanPinch: get state from props', props, state);
-
-        if (props.containerDimensions) {
-            if (
-                Array.isArray(props.containerDimensions) &&
-                props.containerDimensions.length === 2
-            ) {
-                newState.containerDimensions = props.containerDimensions;
-            }
-        }
-
-        if (props.contentDimensions) {
-            if (
-                Array.isArray(props.contentDimensions) &&
-                props.contentDimensions.length === 2
-            ) {
-                newState.contentDimensions = props.contentDimensions;
-            }
-        }
-
-        // Geet container and content width/height from either new or previous state
-        const [containerWidth, containerHeight] = newState.containerDimensions ||
-            state.containerDimensions;
-        const [contentWidth, contentHeight] = newState.contentDimensions || state.contentDimensions;
-
-        // If all widths and heights are available, calculate xRange and yRange
-        if (containerWidth && containerHeight && contentWidth && contentHeight) {
-            let xRange;
-            let yRange;
-            if (containerWidth > contentWidth) {
-                xRange = [0, containerWidth - contentWidth];
-            } else {
-                xRange = [contentWidth * -1 + containerWidth, 0];
-            }
-            if (containerHeight > contentHeight) {
-                yRange = [0, containerHeight - contentHeight];
-            } else {
-                yRange = [contentHeight * -1 + containerHeight, 0];
-            }
-            newState.xRange = xRange;
-            newState.yRange = yRange;
-        }
-
-        console.log('PanPinch: New state is', newState);
-        return newState;
-    }
-
-
-    render() {
-        console.log('PanPinch: Rendering', this.cappedTranslation, this.state);
-        this.setupProperties();
         return (
             <View style={styles.container}>
                 { /* Only render stuff when we know the window's dimensions, needed to cap */ }
                 <PanGestureHandler
                     ref={this.panHandler}
                     simultaneousHandlers={this.pinchHandler}
-                    onHandlerStateChange={this.onPanStateChange}
-                    onGestureEvent={this.onPanGestureEvent}
+                    onHandlerStateChange={onPanStateChange}
+                    onGestureEvent={onPanGestureEvent}
                 >
                     <Animated.View style={styles.container}>
                         <PinchGestureHandler
                             ref={this.pinchHandler}
                             simultaneousHandlers={this.panHandler}
-                            onHandlerStateChange={this.onPinchStateChange}
-                            onGestureEvent={this.onPinchGestureEvent}
+                            onHandlerStateChange={onPinchStateChange}
+                            onGestureEvent={onPinchGestureEvent}
                         >
                             { /* If PinchGestureHandler doesn't contain a view, it will be tiny */ }
                             <Animated.View
@@ -450,9 +460,9 @@ export default class PanPinch extends React.Component {
                                 { React.Children.map(this.props.children, child => (
                                     React.cloneElement(child, {
                                         // 'left' or 'translateX' are reserved words
-                                        animatedLeft: this.resultingXTranslation,
-                                        animatedTop: this.resultingYTranslation,
-                                        animatedZoom: this.resultingZoom,
+                                        animatedLeft: resultingXTranslation,
+                                        animatedTop: resultingYTranslation,
+                                        animatedZoom: resultingZoom,
                                     })
                                 )) }
 
