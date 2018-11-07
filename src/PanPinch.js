@@ -438,6 +438,8 @@ export default class PanPinch extends React.Component {
                 { /* Only render stuff when we know the window's dimensions, needed to cap */ }
                 <PanGestureHandler
                     ref={this.panHandler}
+                    // minDist={20}
+                    // minPointers={2}
                     simultaneousHandlers={this.pinchHandler}
                     onHandlerStateChange={onPanStateChange}
                     onGestureEvent={onPanGestureEvent}
