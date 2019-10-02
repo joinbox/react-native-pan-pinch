@@ -254,7 +254,7 @@ export default class PanPinch extends React.Component {
             }
         }
 
-        console.log('PanPinch: Return derived state');
+        // console.log('PanPinch: Return derived state');
         return newState;
 
     }
@@ -335,7 +335,7 @@ export default class PanPinch extends React.Component {
         // Don't use resultingZoom to set adjusted range limits; they are larger than the actual
         // boundaries when pinchGesture ends (just before they snap back)
         const cappedEffectiveZoom = block([
-            debug('PanPinch: Current zoom is', currentTransforms.zoom),
+            // debug('PanPinch: Current zoom is', currentTransforms.zoom),
             cap(
                 this.state.zoomRange[0],
                 this.state.zoomRange[1],
@@ -389,8 +389,8 @@ export default class PanPinch extends React.Component {
 
 
         const resultingXTranslation = block([
-            debug('PanPinch: xMin', xRangeMin),
-            debug('PanPinch: adjusted xMin', adjustedXMin),
+            // debug('PanPinch: xMin', xRangeMin),
+            // debug('PanPinch: adjusted xMin', adjustedXMin),
             updateTranslation(
                 previousTransforms.x,
                 currentTransforms.x,
@@ -431,7 +431,7 @@ export default class PanPinch extends React.Component {
             },
         }]);
 
-        console.log('PanPinch: Rendering');
+        // console.log('PanPinch: Rendering');
 
         return (
             <View style={styles.container}>
