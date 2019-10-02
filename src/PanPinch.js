@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { DangerZone, GestureHandler } from 'expo';
+import Animated from 'react-native-reanimated';
+
+import * as GestureHandler from 'react-native-gesture-handler';
 
 const { PanGestureHandler, PinchGestureHandler, State } = GestureHandler;
 
-const { Animated } = DangerZone;
 // console.log = () => {};
 
 const {
