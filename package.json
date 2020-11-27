@@ -1,6 +1,6 @@
 {
   "name": "react-native-pan-pinch",
-  "version": "0.5.1",
+  "version": "1.0.0",
   "description": "\"Pan and pinch (zoom) component for React Native, based on reanimated\"",
   "main": "src/PanPinch.js",
   "scripts": {
