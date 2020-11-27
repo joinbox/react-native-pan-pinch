@@ -1,13 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { DangerZone, GestureHandler } from 'expo';
-
-const { PanGestureHandler, PinchGestureHandler, State } = GestureHandler;
-
-const { Animated } = DangerZone;
-// console.log = () => {};
-
-const {
+import Animated, {
     event,
     set,
     Value,
@@ -17,14 +10,15 @@ const {
     add,
     min,
     max,
-    debug,
+    // debug,
     block,
     greaterOrEq,
     sub,
-    // greaterThan,
-    // pow,
     divide,
-} = Animated;
+} from 'react-native-reanimated';
+import { PanGestureHandler, PinchGestureHandler, State } from 'react-native-gesture-handler';
+
+// console.log = () => {};
 
 
 /**
