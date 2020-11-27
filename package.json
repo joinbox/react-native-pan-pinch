@@ -26,16 +26,14 @@
   "peerDependencies": {
     "expo": "^39.0.0",
     "react": "16.13.0",
-    "react-native": "https://github.com/expo/react-native/archive/sdk-39.0.3.tar.gz"
+    "react-native": "https://github.com/expo/react-native/archive/sdk-39.0.3.tar.gz",
+    "react-native-gesture-handler": "^1.9.0",
+    "react-native-reanimated": "^1.13.2"
   },
   "author": "Felix Steiner <felix@joinbox.com> (http://joinbox.com)",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/joinbox/react-native-pan-pinch/issues"
   },
-  "homepage": "https://github.com/joinbox/react-native-pan-pinch#readme",
-  "dependencies": {
-    "react-native-gesture-handler": "^1.9.0",
-    "react-native-reanimated": "^1.13.2"
-  }
+  "homepage": "https://github.com/joinbox/react-native-pan-pinch#readme"
 }
